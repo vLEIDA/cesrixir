@@ -1,4 +1,13 @@
 defmodule Cesr do
+  @moduledoc """
+  Main entrypoint for CESR encoder/decoder.
+
+  This module contains consume_stream/1, consume_stream/2,
+  consume_primitive_T/2 which are the main decoders for CESR streams or CESR
+  primitives and produce_binary_stream, produce_text_stream which are the main
+  encoders for a set of cesr_stream elements.
+  """
+
   alias Cesr.CesrElement
   alias Cesr.CodeTable
   alias Cesr.Version_String_1
@@ -9,33 +18,60 @@ defmodule Cesr do
 
   require Logger
 
-  @spec consume_stream(binary(), list(), non_neg_integer(),
-    :keri_aaabaa | :keri_aaacaa) :: list() | {:error, binary()}
-  def consume_stream(stream, acc \\ [], current_byte \\ 0, protocol_genus \\ :keri_aaabaa)
+  @doc """
+  Consumes well-formed cesr-stream.
+
+  This consumes a well-formed cesr stream (ie one that meets the
+  cold start requirements).  The cold start necessitates that the
+  elements of the stream be:
+    a fieldmap of one of the serialization types (cbor, mgpk, json) with valid
+      cesr version string
+    a count code or op code
+    an annotation of the weird list of characters you can annotate a cesr stream with
+
+  An optional protocol_genus can be used to specify a specific lookup table for
+  this stream for use by count codes and primitives.  Field maps will define
+  their lookup tables in their version strings.
+  """
+  @spec consume_stream(binary(), :keri_aaabaa | :keri_aaacaa) :: list() | {:error, binary()}
+  def consume_stream(stream, protocol_genus \\ :keri_aaabaa), do: _consume_stream(stream, [], 0, protocol_genus)
   # No elements no stream
-  def consume_stream(stream, [], _current_byte, _protocol_genus) when byte_size(stream) == 0 do
+  defp _consume_stream(stream, [], _current_byte, _protocol_genus) when byte_size(stream) == 0 do
     {:error, "Not enough bytes in cesr stream"}
   end
   # Termination on stream exhaustion
-  def consume_stream(stream, acc, _current_byte, _protocol_genus)
+  defp _consume_stream(stream, acc, _current_byte, _protocol_genus)
     when byte_size(stream) == 0 and length(acc) > 0 
   do
     Enum.reverse(Enum.filter(acc, fn "" -> false; _ -> true end))
   end
   # Entrypoint, accumulator and current_byte both start at zero
-  def consume_stream(stream, acc, current_byte, protocol_genus) do
+  defp _consume_stream(stream, acc, current_byte, protocol_genus) do
     case consume_element(stream, protocol_genus) do
       {:protocol_genus_switch, new_protocol_genus, rest} -> 
-        consume_stream(rest, [new_protocol_genus | acc], byte_size(stream) - byte_size(rest) + current_byte, new_protocol_genus)
+        _consume_stream(rest, [new_protocol_genus | acc], byte_size(stream) - byte_size(rest) + current_byte, new_protocol_genus)
       {:ok, element, rest} ->
-          consume_stream(rest, [element | acc], byte_size(stream) - byte_size(rest) + current_byte, protocol_genus)
+          _consume_stream(rest, [element | acc], byte_size(stream) - byte_size(rest) + current_byte, protocol_genus)
       {:error, message} -> {:error, message}
     end
   end
 
+  @doc """
+  Takes a list of cesr_elements and produces the base64 cesr representation of those elements
+
+  Field maps (mgpk, json, cbor) are of course serialized to their own binary
+  representations if they exist in the cesr elements list.
+  """
   def produce_text_stream(list_of_cesr_elements) when is_list(list_of_cesr_elements) do
     _produce_stream(list_of_cesr_elements, :text, [])
   end
+
+  @doc """
+  Takes a list of cesr_elements and produces the binary cesr representation of those elements
+
+  Field maps (mgpk, json, cbor) are of course serialized to their own binary
+  representations if they exist in the cesr elements list.
+  """
   def produce_binary_stream(list_of_cesr_elements) when is_list(list_of_cesr_elements) do
     _produce_stream(list_of_cesr_elements, :binary, [])
   end
@@ -63,6 +99,15 @@ defmodule Cesr do
     IO.iodata_to_binary(Enum.reverse(acc))
   end
 
+  @doc """
+  Parses next cesr_element in a well-formed cesr stream.
+
+  This function is used internally by consume_stream to parse the next cesr
+  element in a well formed cesr stream (ie one that obeys the cold start
+  requirements).
+  
+  You'll find it easier to use the consume_stream function directly.
+  """
   def consume_element(cesr_stream, protocol_genus \\ :keri_aaabaa)
   def consume_element(cesr_stream, protocol_genus) when byte_size(cesr_stream) >= 1 do
     << first_tritet::3, _::bitstring >> = cesr_stream
@@ -84,17 +129,24 @@ defmodule Cesr do
   end
 
   @doc """
-    Consume element works on the top level CESR constructs and relies
+    Consumes exactly one cesr b64 element.
+
+    Consume stream works on the top level CESR constructs and relies
     explicitly on the cold_start sniffing function.
+
     However, cesr primitives are also embedded within the field map constructs
-    and we'd rather not create a fake stream just to process them.  So this
-    helper function reads one primitive off the stream and returns the resulting
-    cesr primitive struct (if successful) and an error if not.
+    and we'd rather not create a fake stream every time just to process them.
+    So this helper function just does a lookup on a table and returns the
+    resulting cesr primitive struct (if successful) and an error if not.
 
     A string containing more than one cesr element is considered an error.
   """
-  @spec consume_primitive_T(String.t() | struct(), Version_String_1.t() | Version_String_2.t()) :: {:ok, struct()} | {:notfound, any()} | {:error, any()}
-  def consume_primitive_T(cesr_primitive, version \\ Kernel.elem(Version_String_2.new(%{proto: :keri, proto_major: 2, proto_minor: 0, genus_major: 2, genus_minor: 1, kind: :json, size: 0}), 1))
+  @spec consume_primitive_T(String.t() | struct(), Version_String_1.t() |
+    Version_String_2.t()) :: {:ok, struct()} | {:notfound, any()} | {:error,
+    any()}
+  def consume_primitive_T(cesr_primitive, 
+    version \\ %Version_String_2{proto: :keri, proto_major: 2, proto_minor: 0,
+      genus_major: 2, genus_minor: 1, kind: :json, size: 0})
   def consume_primitive_T(cesr_primitive, version) when byte_size(cesr_primitive) >= 4 do
     %version_type{} = version
     result = case version_type do

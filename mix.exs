@@ -7,7 +7,20 @@ defmodule Cesr.MixProject do
       version: "1.0.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      docs: [
+        nest_modules_by_prefix: [Cesr,
+          Cesr.Primitive,
+          Cesr.Primitive.Indexes,
+          Cesr.Primitive.Generator,
+          Cesr.Index,
+          Cesr.Utility,
+          Cesr.CodeTable,
+          Cesr.CountCode.Generator,
+          Cesr.CountCodeKERIv1,
+          Cesr.CountCodeKERIv2 ]
+      ]
+
     ]
   end
 
