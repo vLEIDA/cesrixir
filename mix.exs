@@ -4,7 +4,7 @@ defmodule Cesr.MixProject do
   def project do
     [
       app: :cesrixir,
-      version: "0.1.0",
+      version: "1.0.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps()
@@ -21,8 +21,12 @@ defmodule Cesr.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      {:msgpack, "~> 0.8.1"},
+      {:ord_map, "~> 0.1.0"},
+      {:jason, "~> 1.4"},
+      # Our own version of scalpel-software/cbor on hex.pm that
+      # has OrdMap representations.
+      {:cbor, git: "https://github.com/vLEIDA/cbor.git"}
     ]
   end
 end

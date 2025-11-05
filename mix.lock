@@ -1,0 +1,6 @@
+%{
+  "cbor": {:git, "https://github.com/vLEIDA/cbor.git", "ad6f9db905bcb74b53f34955cdfc7477bb893c7d", []},
+  "jason": {:hex, :jason, "1.4.4", "b9226785a9aa77b6857ca22832cffa5d5011a667207eb2a0ad56adb5db443b8a", [:mix], [{:decimal, "~> 1.0 or ~> 2.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "c5eb0cab91f094599f94d55bc63409236a8ec69a21a67814529e8d5f6cc90b3b"},
+  "msgpack": {:hex, :msgpack, "0.8.1", "deb35c13291eafe56ad9870374c2eaa92323dc5503d50432ebcaf47052e6d343", [:rebar3], [], "hexpm", "04d9a75bc6f4bed8627ee1e7aa9df37601f510fdc786a84fe932bb21d765565f"},
+  "ord_map": {:hex, :ord_map, "0.1.0", "6c958f53e38934a2f60d4b0050e3bdfcc498071769f93887372ae4db5cb21d3c", [:mix], [], "hexpm", "c3c87eea4f196bf0ab316eb2f089a922fb783c59a2a579bcdea616c06a7faebb"},
+}
