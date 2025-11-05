@@ -24,10 +24,11 @@ defmodule Cesr.MixProject do
       {:msgpack, "~> 0.8.1"},
       {:ord_map, "~> 0.1.0"},
       {:jason, "~> 1.4"},
-      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       # Our own version of scalpel-software/cbor on hex.pm that
       # has OrdMap representations.
-      {:cbor, git: "https://github.com/vLEIDA/cbor.git"}
+      {:cbor, git: "https://github.com/vLEIDA/cbor.git"},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:ex_doc, "0.39.1", only: [:dev], runtime: false}
     ]
   end
 end
