@@ -1,10 +1,13 @@
 defmodule Cesr.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/vLEIDA/cesrixir"
+  @version "1.0.0"
+
   def project do
     [
       app: :cesrixir,
-      version: "1.0.0",
+      version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -19,8 +22,13 @@ defmodule Cesr.MixProject do
           Cesr.CountCode.Generator,
           Cesr.CountCodeKERIv1,
           Cesr.CountCodeKERIv2 ]
+      ],
+      package: [
+        description: "An implementation of the CESR encoding/decoding protocol (versions 1 and 2) of KERI protocol/genus 1.0 and 2.0 tables.",
+        licenses: ["MIT"],
+        links: %{"GitHub" => @source_url},
+        maintainers: ["daidoji", "dc7"]
       ]
-
     ]
   end
 
@@ -38,8 +46,8 @@ defmodule Cesr.MixProject do
       {:ord_map, "~> 0.1.0"},
       {:jason, "~> 1.4"},
       # Our own version of scalpel-software/cbor on hex.pm that
-      # has OrdMap representations.
-      {:cbor, git: "https://github.com/vLEIDA/cbor.git"},
+      # has support for OrdMap serialization/deserialization.
+      {:cbor, "~> 1.0", hex: :cbor_ordmap},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:ex_doc, "0.39.1", only: [:dev], runtime: false}
     ]
