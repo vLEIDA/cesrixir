@@ -24,7 +24,7 @@ defmodule Cesr.Utility.JsonUtils do
     do
       serialize(OrdMap.new([{"v", correct_version_string}]
         ++ OrdMap.delete(payload_with_dummy_version, "v").tuples))
-    else 
+    else
       {:error, :must_be_kind_json} -> {:error, :must_be_kind_json}
       e -> dbg(e)
     end
@@ -64,15 +64,24 @@ defmodule Cesr.Utility.JsonUtils do
   end
 
   @spec deserialize_ordered_object(any()) :: OrdMap.t()
-  defp deserialize_ordered_object(ordered_object) do
-    Enum.map(ordered_object.values, &deserialize_tuple/1) |> OrdMap.new
+  defp deserialize_ordered_object(%Jason.OrderedObject{} = ordered_object) do
+    Enum.map(ordered_object.values, &process_key_value/1) |> OrdMap.new
   end
 
-  @spec deserialize_tuple({any(), any()}) :: {any(), OrdMap.t()}
-  defp deserialize_tuple({key, value}) do
+  @spec process_key_value({any(), any()}) :: {any(), OrdMap.t()}
+  defp process_key_value({key, value}) do
     case value do
       %Jason.OrderedObject{} -> {key, deserialize_ordered_object(value)}
+      _ when is_list(value) -> {key, Enum.map(value, &process_val/1)}
       _ -> {key, value}
+    end
+  end
+
+  defp process_val(value) do
+    case value do
+      _ when is_list(value) -> Enum.map(value, &process_val/1)
+      %Jason.OrderedObject{} -> deserialize_ordered_object(value)
+      _ -> value
     end
   end
 

@@ -54,6 +54,13 @@ defmodule Cesr.JsonUtilsTest do
     assert JsonUtils.deserialize("{}") == {:ok, %OrdMap{tuples: []}}
   end
 
+  test "No Jason.Ordered objects in list after deserialize" do
+    ordered_obj_in_list = OrdMap.new([{"foo", [OrdMap.new([{"a", 1}])]}])
+    {:ok, serialized_obj} = JsonUtils.serialize(ordered_obj_in_list)
+    assert serialized_obj == "{\"foo\":[{\"a\":1}]}"
+    assert JsonUtils.deserialize(serialized_obj) == {:ok, ordered_obj_in_list}
+  end
+
   test "Keripy simple examples deserialize -> serialize -> deserialize" do
     Path.wildcard("test/kerilixir/example_payloads/simple/json/*") |> Enum.map(fn (example_payload) ->
       payload_binary = File.read!(example_payload)
