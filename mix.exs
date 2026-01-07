@@ -49,7 +49,8 @@ defmodule Cesr.MixProject do
       # has support for OrdMap serialization/deserialization.
       {:cbor, "~> 1.0", hex: :cbor_ordmap},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
-      {:ex_doc, "0.39.1", only: [:dev], runtime: false}
+      {:ex_doc, "0.39.1", only: [:dev], runtime: false},
+      {:libsodium, "~> 2.0.0"}
     ]
   end
 end
