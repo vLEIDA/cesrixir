@@ -8,37 +8,55 @@ defmodule Cesr.JsonUtilsTest do
   test "serialize_cesr_json_payload serializes" do
     {:ok, vers_2} = Version_String_2.new(%{proto: :keri, proto_major: 2,
       proto_minor: 0, genus_major: 2, genus_minor: 0, kind: :json, size: 0})
-    our_map = %OrdMap{tuples: [{"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"}]}
-    assert JsonUtils.serialize_cesr_json_payload(our_map, vers_2) ==
+    our_map = %OrdMap{tuples: [{"v", vers_2},
+                               {"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"}]}
+    assert JsonUtils.serialize_cesr_json_payload(our_map) ==
       {:ok, "{\"v\":\"KERICAACAAJSONAABB.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"}"}
 
-    our_map_2 = %OrdMap{tuples: [{"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"},
+    our_map_2 = %OrdMap{tuples: [{"v", vers_2},
+                                 {"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"},
      {"tamil", "வணக்கம"}]} # Added tamil so byte size is different than string.length
-    assert JsonUtils.serialize_cesr_json_payload(our_map_2, vers_2) ==
+    assert JsonUtils.serialize_cesr_json_payload(our_map_2) ==
       {:ok, "{\"v\":\"KERICAACAAJSONAABe.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\",\"tamil\":\"வணக்கம\"}"}
   end
 
   test "deserialize_cesr_json_payload deserializes" do
-    our_map = %OrdMap{tuples: [{"v", "KERICAAJSONAAA-."},
+    our_map = %OrdMap{tuples: [{"v", %Cesr.Version_String_2{
+                                        genus_major: 2,
+                                        genus_minor: 0,
+                                        kind: :json,
+                                        proto: :keri,
+                                        proto_major: 2,
+                                        proto_minor: 0,
+                                        size: 65
+                                      }},
                                {"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"}]}
-    assert JsonUtils.deserialize_cesr_json_payload("{\"v\":\"KERICAAJSONAAA-.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"}")
-      == {:ok, our_map}
+    assert JsonUtils.deserialize_cesr_json_payload("{\"v\":\"KERICAACAAJSONAABB.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"}")
+      == {:ok, our_map, ""}
 
-    our_map_2 = %OrdMap{tuples: [{"v", "KERICAAJSONAABb."},
+    our_map_2 = %OrdMap{tuples: [{"v",  %Cesr.Version_String_2{
+                                          genus_major: 2,
+                                          genus_minor: 0,
+                                          kind: :json,
+                                          proto: :keri,
+                                          proto_major: 2,
+                                          proto_minor: 0,
+                                          size: 94
+                                        }},
                                  {"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"},
-     {"tamil", "வணக்கம"}]} # Added tamil so byte size is different than string.length
-    assert JsonUtils.deserialize_cesr_json_payload("{\"v\":\"KERICAAJSONAABb.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\",\"tamil\":\"வணக்கம\"}")
-      == {:ok, our_map_2}
+                                 {"tamil", "வணக்கம"}]} # Added tamil so byte size is different than string.length
+    assert JsonUtils.deserialize_cesr_json_payload("{\"v\":\"KERICAACAAJSONAABe.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\",\"tamil\":\"வணக்கம\"}")
+      == {:ok, our_map_2, ""}
   end
 
   test "JSONUtils serialize serializes to an ordered map" do
-    assert JsonUtils.serialize(%OrdMap{
+    assert JsonUtils.serialize_ordmap_to_json(%OrdMap{
       tuples: [{"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"}]
     }) == {:ok, "{\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"}"}
   end
 
   test "JSONUtils serialize serializes to an empty map" do
-    assert JsonUtils.serialize(%OrdMap{
+    assert JsonUtils.serialize_ordmap_to_json(%OrdMap{
       tuples: [{"foo", %OrdMap{tuples: []}}, {"wibble", "wobble"}]
     }) == {:ok, "{\"foo\":{},\"wibble\":\"wobble\"}"}
   end
@@ -56,7 +74,7 @@ defmodule Cesr.JsonUtilsTest do
 
   test "No Jason.Ordered objects in list after deserialize" do
     ordered_obj_in_list = OrdMap.new([{"foo", [OrdMap.new([{"a", 1}])]}])
-    {:ok, serialized_obj} = JsonUtils.serialize(ordered_obj_in_list)
+    {:ok, serialized_obj} = JsonUtils.serialize_ordmap_to_json(ordered_obj_in_list)
     assert serialized_obj == "{\"foo\":[{\"a\":1}]}"
     assert JsonUtils.deserialize(serialized_obj) == {:ok, ordered_obj_in_list}
   end
@@ -64,10 +82,10 @@ defmodule Cesr.JsonUtilsTest do
   test "Keripy simple examples deserialize -> serialize -> deserialize" do
     Path.wildcard("test/kerilixir/example_payloads/simple/json/*") |> Enum.map(fn (example_payload) ->
       payload_binary = File.read!(example_payload)
-      {:ok, deserialized_ordmap} = JsonUtils.deserialize_cesr_json_payload(payload_binary)
+      {:ok, deserialized_ordmap, ""} = JsonUtils.deserialize_cesr_json_payload(payload_binary)
       {:ok, version_example} = Cesr.match_version(deserialized_ordmap["v"])
-      {:ok, serialized_ordmap} = JsonUtils.serialize_cesr_json_payload(deserialized_ordmap, version_example)
-      {:ok, deserialized_ordmap_2nd_rnd} = JsonUtils.deserialize_cesr_json_payload(serialized_ordmap)
+      {:ok, serialized_ordmap} = JsonUtils.serialize_cesr_json_payload(deserialized_ordmap)
+      {:ok, deserialized_ordmap_2nd_rnd, ""} = JsonUtils.deserialize_cesr_json_payload(serialized_ordmap)
       {:ok, version_reserialized} = Cesr.match_version(deserialized_ordmap_2nd_rnd["v"])
       assert deserialized_ordmap == deserialized_ordmap_2nd_rnd
       assert version_reserialized == version_example
@@ -105,25 +123,25 @@ defmodule Cesr.JsonUtilsTest do
 
   test "Size calculated correctly for version string 1" do
     {:ok, vers_1} = Version_String_1.new(%{proto: :keri, major: 1, minor: 0, kind: :json, size: 0})
-    our_map = %OrdMap{tuples: [{"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"}]}
+    our_map = %OrdMap{tuples: [{"v", vers_1}, {"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"}]}
     # same as first test above
-    #assert JsonUtils.serialize_cesr_json_payload(our_map, vers_1) ==
+    #assert JsonUtils.serialize_cesr_json_payload(our_map) ==
     #  {:ok, "{\"v\":\"KERICAAJSONAAA-.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"}"}
-    {:ok, serialized_map} = JsonUtils.serialize_cesr_json_payload(our_map, vers_1)
-    {:ok, deserialized_map} = JsonUtils.deserialize_cesr_json_payload(serialized_map)
-    {:ok, version_string} = Version_String_1.deserialize(OrdMap.get(deserialized_map, "v"))
+    {:ok, serialized_map} = JsonUtils.serialize_cesr_json_payload(our_map)
+    {:ok, deserialized_map, ""} = JsonUtils.deserialize_cesr_json_payload(serialized_map)
+    version_string = OrdMap.get(deserialized_map, "v")
     assert byte_size(serialized_map) == version_string.size
   end
 
   test "Size calculated correctly for version string 2" do
     {:ok, vers_2} = Version_String_2.new(%{proto: :keri, proto_major: 2, proto_minor: 0, genus_major: 2, genus_minor: 0, kind: :json, size: 0})
-    our_map = %OrdMap{tuples: [{"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"}]}
+    our_map = %OrdMap{tuples: [{"v", vers_2}, {"foo", %OrdMap{tuples: [{"bar", "baz"}]}}, {"wibble", "wobble"}]}
     # same as first test above
     #assert JsonUtils.serialize_cesr_json_payload(our_map, vers_2) ==
     #  {:ok, "{\"v\":\"KERICAAJSONAAA-.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"}"}
-    {:ok, serialized_map} = JsonUtils.serialize_cesr_json_payload(our_map, vers_2)
-    {:ok, deserialized_map} = JsonUtils.deserialize_cesr_json_payload(serialized_map)
-    {:ok, version_string} = Version_String_2.deserialize(OrdMap.get(deserialized_map, "v"))
+    {:ok, serialized_map} = JsonUtils.serialize_cesr_json_payload(our_map)
+    {:ok, deserialized_map, ""} = JsonUtils.deserialize_cesr_json_payload(serialized_map)
+    version_string = OrdMap.get(deserialized_map, "v")
     assert byte_size(serialized_map) == version_string.size
   end
 end

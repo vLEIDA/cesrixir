@@ -79,9 +79,9 @@ defmodule Cesr do
   # Note: version should always be a valid version string in streams used by this function
   defp _produce_stream([event_or_acdc = %OrdMap{tuples: [{"v", version} | _]} | rest_of_stream], stream_domain, acc) do
     {:ok, serialized_ordmap} = case version.kind do
-      :json -> JsonUtils.serialize_cesr_json_payload(event_or_acdc, version)
-      :cbor -> CBORUtils.serialize_cesr_cbor_payload(event_or_acdc, version)
-      :mgpk -> MessagePackUtils.serialize_cesr_mgpk_payload(event_or_acdc, version)
+      :json -> JsonUtils.serialize_cesr_json_payload(event_or_acdc)
+      :cbor -> CBORUtils.serialize_cesr_cbor_payload(event_or_acdc)
+      :mgpk -> MessagePackUtils.serialize_cesr_mgpk_payload(event_or_acdc)
       :cesr -> :not_implemented
     end
     _produce_stream(rest_of_stream, stream_domain, [serialized_ordmap | acc])
@@ -455,21 +455,7 @@ defmodule Cesr do
   end
 
   defp process_json_map(stream) do
-    try do
-      with twenty_five_byte_slice_attempt <- Kernel.binary_part(stream, 0, 25),
-        {:ok, version} <- match_version(twenty_five_byte_slice_attempt),
-        potential_json_map <- Kernel.binary_part(stream, 0, version.size),
-        {:ok, cesr_ordmap} <- JsonUtils.deserialize_cesr_json_payload(potential_json_map)
-      do
-        cesr_ordmap_w_version = OrdMap.put(cesr_ordmap, "v", version)
-        <<_map::binary-size(version.size), rest_of_stream::binary>> = stream
-        {:ok, cesr_ordmap_w_version, rest_of_stream}
-      else
-        {:error, err_msg} -> {:error, "Error in processing json map: #{err_msg}"}
-      end
-    rescue
-      ArgumentError -> {:error, "Not enough input to read version string"}
-    end
+    JsonUtils.deserialize_cesr_json_payload(stream)
   end
 
   # Process Mgpk fixmap is the same as dynamic map in mgpk.  So we just call that function.
@@ -477,23 +463,9 @@ defmodule Cesr do
     process_mgpk_map(stream)
   end
 
-  defp process_cbor_map(<<twenty_five_byte_slice::binary-size(25), _rest::binary>> = stream) do
-    try do
-      with {:ok, version} <- match_version(twenty_five_byte_slice),
-        <<potential_cbor_map::binary-size(version.size), rest_of_stream::binary>> <- stream,
-        {:ok, cesr_ordmap} <- CBORUtils.deserialize_cesr_cbor_payload(potential_cbor_map)
-      do
-        # We do this just to avoid unserializing the version again
-        cesr_ordmap_w_version = OrdMap.put(cesr_ordmap, "v", version)
-        {:ok, cesr_ordmap_w_version, rest_of_stream}
-      else
-        {:error, err_msg} -> {:error, "Error in processing CBOR map: #{err_msg}"}
-      end
-    rescue 
-      MatchError -> {:error, "Not enough bytes in stream corresponding to version size"}
-    end
+  defp process_cbor_map(stream) do
+    CBORUtils.deserialize_cesr_cbor_payload(stream)
   end
-  defp process_cbor_map(_stream), do: {:error, "Not enough input to read version string"}
 
   # Functionally the same as processing a fixmap so we call the mgpk parsing function here
   defp process_mgpk_16_or_32_map(stream) do
@@ -533,21 +505,7 @@ defmodule Cesr do
   end
 
   defp process_mgpk_map(stream) do
-    try do
-      with twenty_five_byte_slice_attempt <- Kernel.binary_part(stream, 0, 25),
-        {:ok, version} <- match_version(twenty_five_byte_slice_attempt),
-        potential_mgpk_map <- Kernel.binary_part(stream, 0, version.size),
-        {:ok, cesr_ordmap} <- MessagePackUtils.deserialize_cesr_mgpk_payload(potential_mgpk_map)
-      do
-        cesr_ordmap_w_version = OrdMap.put(cesr_ordmap, "v", version)
-        <<_map::binary-size(version.size), rest_of_stream::binary>> = stream
-        {:ok, cesr_ordmap_w_version, rest_of_stream}
-      else
-        {:error, err_msg} -> {:error, "Error in processing mgpk fixmap: #{err_msg}"}
-      end
-    rescue
-      _ in ArgumentError -> {:error, "Not enough input to read size from version string"}
-    end
+    MessagePackUtils.deserialize_cesr_mgpk_payload(stream)
   end
 end
 

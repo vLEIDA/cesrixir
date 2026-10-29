@@ -112,15 +112,15 @@ defmodule Cesr.CesrTest do
   test "Json consumed on element fails" do
     # Missing last bracket
     assert Cesr.consume_element("{\"v\":\"KERIBAABAAJSONAABB.\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"")
-      == {:error, "Not enough input to read version string"}
+      == {:error, "Not enough bytes (65 bytes) in stream"}
 
     # Empty version string
     assert Cesr.consume_element("{\"v\":\"\",\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"}")
-      == {:error, "Error in processing json map: No version matched {\"v\":\"\",\"foo\":{\"bar\":\"baz"}
+      == {:error, "No version matched {\"v\":\"\",\"foo\":{\"bar\":\"baz"}
 
     # Version string at end
     assert Cesr.consume_element("{\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\",\"v\":\"KERIBAAJSONAAA-.\"")
-      == {:error, "Error in processing json map: No version matched {\"foo\":{\"bar\":\"baz\"},\"wib"}
+      == {:error, "No version matched {\"foo\":{\"bar\":\"baz\"},\"wib"}
   end
 
   test "Message Pack consumed on element succeeds" do
@@ -145,15 +145,15 @@ defmodule Cesr.CesrTest do
   test "Bad Message Pack consumed on element fails" do
     # Size wrong
     out = :msgpack.pack([{"v", "KERIBAABAAMGPKAAAA."}, {"foo", "bar"}], [map_format: :jsx])
-    assert Cesr.consume_element(out) == {:error, "Error in processing mgpk fixmap: Error in MsgPack decoding: incomplete"}
+    assert Cesr.consume_element(out) == {:error, "Error in MsgPack decoding: incomplete"}
 
     # Wrong proto
     out = :msgpack.pack([{"v", "ZZZZBAAMGPKAAAg."}, {"foo", "bar"}], [map_format: :jsx])
-    assert Cesr.consume_element(out) == {:error, "Error in processing mgpk fixmap: No version matched \x82\xC4\x01v\xC4\x10ZZZZBAAMGPKAAAg.\xC4\x03f"}
+    assert Cesr.consume_element(out) == {:error, "No version matched \x82\xC4\x01v\xC4\x10ZZZZBAAMGPKAAAg.\xC4\x03f"}
 
     # Wrong version
     out = :msgpack.pack([{"v", "KERI***MGPKAAAg."}, {"foo", "bar"}], [map_format: :jsx])
-    assert Cesr.consume_element(out) == {:error, "Error in processing mgpk fixmap: No version matched \x82\xC4\x01v\xC4\x10KERI***MGPKAAAg.\xC4\x03f"}
+    assert Cesr.consume_element(out) == {:error, "No version matched \x82\xC4\x01v\xC4\x10KERI***MGPKAAAg.\xC4\x03f"}
   end
 
   test "CBOR consumed element succeeds" do
@@ -189,15 +189,15 @@ defmodule Cesr.CesrTest do
   test "CBOR consumed element fails" do
     # Size wrong
     out = CBOR.encode(%OrdMap{tuples: [{"v", "KERIBAABAACBORAAAA."}, {"foo", "bar"}]})
-    assert Cesr.consume_element(out) == {:error, "Error in processing CBOR map: Error in CBOR decoding: cbor_function_clause_error"}
+    assert Cesr.consume_element(out) == {:error, "Error in CBOR decoding: cbor_function_clause_error"}
 
     # Wrong proto
     out = CBOR.encode(%OrdMap{tuples: [{"v", "ZZZZBAABAACBORAAAg."}, {"foo", "bar"}]})
-    assert Cesr.consume_element(out) == {:error, "Error in processing CBOR map: No version matched \xA2avsZZZZBAABAACBORAAAg.cf"}
+    assert Cesr.consume_element(out) == {:error, "No version matched \xA2avsZZZZBAABAACBORAAAg.cf"}
 
     # Wrong version
     out = CBOR.encode(%OrdMap{tuples: [{"v", "KERI******CBORAAAg."}, {"foo", "bar"}]})
-    assert Cesr.consume_element(out) == {:error, "Error in processing CBOR map: No version matched \xA2avsKERI******CBORAAAg.cf"}
+    assert Cesr.consume_element(out) == {:error, "No version matched \xA2avsKERI******CBORAAAg.cf"}
   end
 
   test "CesrStringB64 Primitive Test" do

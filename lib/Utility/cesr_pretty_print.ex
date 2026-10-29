@@ -44,7 +44,7 @@ defmodule Cesr.Utility.CesrPrettyPrint do
                        fn h, inter_acc -> inter_acc <> pretty_print(h, <<>>, depth) end)
   end
   def pretty_print(%OrdMap{} = list_or_cesr_element, acc, depth) do
-    {:ok, serialized_map} = JsonUtils.serialize(list_or_cesr_element)
+    {:ok, serialized_map} = JsonUtils.serialize_ordmap_to_json(list_or_cesr_element)
     acc <> push_tabs(acc, depth) <> Jason.Formatter.pretty_print(serialized_map)
   end
   def pretty_print(list_or_cesr_element, acc, depth) 
