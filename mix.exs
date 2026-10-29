@@ -2,7 +2,7 @@ defmodule Cesr.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/vLEIDA/cesrixir"
-  @version "1.0.1"
+  @version "1.1.0"
 
   def project do
     [
@@ -44,12 +44,12 @@ defmodule Cesr.MixProject do
     [
       {:msgpack, "~> 0.8.1"},
       {:ord_map, "~> 0.1.0"},
-      {:jason, "~> 1.4"},
+      {:jason, "~> 1.4.0"},
       # Our own version of scalpel-software/cbor on hex.pm that
       # has support for OrdMap serialization/deserialization.
-      {:cbor, "~> 1.0", hex: :cbor_ordmap},
-      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
-      {:ex_doc, "0.39.1", only: [:dev], runtime: false}
+      {:cbor, "~> 1.0.0", hex: :cbor_ordmap},
+      {:dialyxir, "~> 1.4.0", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.40.4", only: [:dev], runtime: false}
     ]
   end
 end
