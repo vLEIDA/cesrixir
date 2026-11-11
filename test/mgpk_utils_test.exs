@@ -65,6 +65,46 @@ defmodule Cesr.MessagePackUtilsTest do
     }) == {:ok, "\x82\xA3foo\x90\xA6wibble\xA6wobble"}
   end
 
+  test "Edge case, only version string serializes and deserializes" do
+    # mgpk contains 3 types of fieldmaps fixmap, map16, map32.  
+    # fixmap is the natural packing for a one element map but the mpgk spec
+    # doesn't disallow packing one element into map16 or map32 either.
+    # However, our particular msgpack implementation at the time of this
+    # writing doesn't support packing into a particular fieldmap type it just
+    # picks a type based on the number of elements beforehand for the developer
+    # so we'll test deserialization works here but not serialization.  I did
+    # open https://github.com/msgpack/msgpack-erlang/issues/103 or we can fork
+    # it if this kind of thing becomes necessary in interop with another msgpk
+    # implementation.
+    only_ver_ordmap = %OrdMap{tuples: [{"v",
+      %Cesr.Version_String_1{major: 1, minor: 0, kind: :mgpk, proto: :keri, size: 21 }}]}
+
+    update_size = fn o, size -> 
+      old_v = OrdMap.get(o, "v")
+      new_v = %{old_v | size: size}
+      OrdMap.put(o, "v", new_v)
+    end
+
+    only_ver_mgpk_flatmap = "\x81\xA1\x76\xB1KERI10MGPK000015_" # size 21
+    only_ver_mgpk_map16 = "\xDE\x00\x01\xA1\x76\xB1KERI10MGPK000017_" # size 23
+    only_ver_mgpk_map32 = "\xDF\x00\x00\x00\x01\xA1\x76\xB1KERI10MGPK000019_" # size 25
+    assert MgpkUtils.serialize_cesr_mgpk_payload(only_ver_ordmap) == {:ok, only_ver_mgpk_flatmap}
+    assert MgpkUtils.deserialize_cesr_mgpk_payload(only_ver_mgpk_flatmap) == {:ok, only_ver_ordmap, ""}
+    assert MgpkUtils.deserialize_cesr_mgpk_payload(only_ver_mgpk_map16) == {:ok, update_size.(only_ver_ordmap, 23), ""}
+    assert MgpkUtils.deserialize_cesr_mgpk_payload(only_ver_mgpk_map32) == {:ok, update_size.(only_ver_ordmap, 25), ""}
+
+    only_ver_ordmap = %OrdMap{tuples: [{"v",
+      %Cesr.Version_String_2{genus_major: 1, genus_minor: 0, kind: :mgpk,
+        proto: :keri, proto_major: 1, proto_minor: 0, size: 23 }}]}
+    only_ver_mgpk_flatmap = "\x81\xA1\x76\xB3KERIBAABAAMGPKAAAX." # size 23
+    only_ver_mgpk_map16 = "\xDE\x00\x01\xA1\x76\xB3KERIBAABAAMGPKAAAZ." # size 25
+    only_ver_mgpk_map32 = "\xDF\x00\x00\x00\x01\xA1\x76\xB3KERIBAABAAMGPKAAAb." # size 27
+    assert MgpkUtils.serialize_cesr_mgpk_payload(only_ver_ordmap) == {:ok, only_ver_mgpk_flatmap}
+    assert MgpkUtils.deserialize_cesr_mgpk_payload(only_ver_mgpk_flatmap) == {:ok, only_ver_ordmap, ""}
+    assert MgpkUtils.deserialize_cesr_mgpk_payload(only_ver_mgpk_map16) == {:ok, update_size.(only_ver_ordmap, 25), ""}
+    assert MgpkUtils.deserialize_cesr_mgpk_payload(only_ver_mgpk_map32) == {:ok, update_size.(only_ver_ordmap, 27), ""}
+  end
+
   @doc """
     Example payloads generated from keripy using sizeify-sample-payloads.py
   """

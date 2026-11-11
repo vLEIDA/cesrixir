@@ -70,6 +70,21 @@ defmodule Cesr.CBORUtilsTest do
     }) == {:ok, "\xA2cfoo\xA0fwibblefwobble"}
   end
 
+  test "Edge case, only version string serializes and deserializes" do
+    only_ver_ordmap = %OrdMap{tuples: [{"v",
+      %Cesr.Version_String_1{major: 1, minor: 0, kind: :cbor, proto: :keri, size: 21 }}]}
+    only_ver_cbor = "\xA1avqKERI10CBOR000015_"
+    assert CBORUtils.serialize_cesr_cbor_payload(only_ver_ordmap) == {:ok, only_ver_cbor}
+    assert CBORUtils.deserialize_cesr_cbor_payload(only_ver_cbor) == {:ok, only_ver_ordmap, ""}
+
+    only_ver_ordmap = %OrdMap{tuples: [{"v",
+      %Cesr.Version_String_2{genus_major: 1, genus_minor: 0, kind: :cbor,
+        proto: :keri, proto_major: 1, proto_minor: 0, size: 23 }}]}
+    only_ver_cbor = "\xA1avsKERIBAABAACBORAAAX."
+    assert CBORUtils.serialize_cesr_cbor_payload(only_ver_ordmap) == {:ok, only_ver_cbor}
+    assert CBORUtils.deserialize_cesr_cbor_payload(only_ver_cbor) == {:ok, only_ver_ordmap, ""}
+  end
+
   @doc """
     Example payloads generated from keripy using sizeify-sample-payloads.py
   """

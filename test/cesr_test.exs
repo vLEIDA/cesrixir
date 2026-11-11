@@ -149,11 +149,11 @@ defmodule Cesr.CesrTest do
 
     # Wrong proto
     out = :msgpack.pack([{"v", "ZZZZBAAMGPKAAAg."}, {"foo", "bar"}], [map_format: :jsx])
-    assert Cesr.consume_element(out) == {:error, "No version matched \x82\xC4\x01v\xC4\x10ZZZZBAAMGPKAAAg.\xC4\x03f"}
+    assert Cesr.consume_element(out) == {:error, "No version matched \x82\xC4\x01v\xC4\x10ZZZZBAAMGPKAAAg.\xC4\x03foo"}
 
     # Wrong version
     out = :msgpack.pack([{"v", "KERI***MGPKAAAg."}, {"foo", "bar"}], [map_format: :jsx])
-    assert Cesr.consume_element(out) == {:error, "No version matched \x82\xC4\x01v\xC4\x10KERI***MGPKAAAg.\xC4\x03f"}
+    assert Cesr.consume_element(out) == {:error, "No version matched \x82\xC4\x01v\xC4\x10KERI***MGPKAAAg.\xC4\x03foo"}
   end
 
   test "CBOR consumed element succeeds" do
@@ -193,11 +193,11 @@ defmodule Cesr.CesrTest do
 
     # Wrong proto
     out = CBOR.encode(%OrdMap{tuples: [{"v", "ZZZZBAABAACBORAAAg."}, {"foo", "bar"}]})
-    assert Cesr.consume_element(out) == {:error, "No version matched \xA2avsZZZZBAABAACBORAAAg.cf"}
+    assert Cesr.consume_element(out) == {:error, "No version matched \xA2avsZZZZBAABAACBORAAAg.cfoocbar"}
 
     # Wrong version
     out = CBOR.encode(%OrdMap{tuples: [{"v", "KERI******CBORAAAg."}, {"foo", "bar"}]})
-    assert Cesr.consume_element(out) == {:error, "No version matched \xA2avsKERI******CBORAAAg.cf"}
+    assert Cesr.consume_element(out) == {:error, "No version matched \xA2avsKERI******CBORAAAg.cfoocbar"}
   end
 
   test "CesrStringB64 Primitive Test" do

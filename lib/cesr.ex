@@ -170,12 +170,12 @@ defmodule Cesr do
     :: {:ok, Version_String_1.t() | Version_String_2.t()} | {:error, any()}
   def match_version(%Version_String_1{} = v), do: {:ok, v}
   def match_version(%Version_String_2{} = v), do: {:ok, v}
-  def match_version(twenty_five_byte_header) when is_binary(twenty_five_byte_header) do
-    case Version_String_2.deserialize(twenty_five_byte_header) do
+  def match_version(header) when is_binary(header) do
+    case Version_String_2.deserialize(header) do
       {:ok, version_2_string} -> {:ok, version_2_string}
-      {:error, _} -> case Version_String_1.deserialize(twenty_five_byte_header) do
+      {:error, _} -> case Version_String_1.deserialize(header) do
         {:ok, version_1_string} -> {:ok, version_1_string}
-        {:error, _} -> {:error, "No version matched #{twenty_five_byte_header}"}
+        {:error, _} -> {:error, "No version matched #{header}"}
       end
     end
   end

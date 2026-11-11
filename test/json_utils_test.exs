@@ -61,6 +61,22 @@ defmodule Cesr.JsonUtilsTest do
     }) == {:ok, "{\"foo\":{},\"wibble\":\"wobble\"}"}
   end
 
+  test "Edge case, only version string serializes and deserializes" do
+    only_ver_ordmap = %OrdMap{tuples: [{"v",
+      %Cesr.Version_String_1{major: 1, minor: 0, kind: :json, proto: :keri, size: 25 }}]}
+    only_ver_json = "{\"v\":\"KERI10JSON000019_\"}"
+    assert JsonUtils.serialize_cesr_json_payload(only_ver_ordmap) == {:ok, only_ver_json}
+    assert JsonUtils.deserialize_cesr_json_payload(only_ver_json) == {:ok, only_ver_ordmap, ""}
+
+    only_ver_ordmap = %OrdMap{tuples: [{"v",
+      %Cesr.Version_String_2{genus_major: 1, genus_minor: 0, kind: :json,
+        proto: :keri, proto_major: 1, proto_minor: 0, size: 27 }}]}
+    only_ver_json = "{\"v\":\"KERIBAABAAJSONAAAb.\"}"
+    assert JsonUtils.serialize_cesr_json_payload(only_ver_ordmap) == {:ok, only_ver_json}
+    assert JsonUtils.deserialize_cesr_json_payload(only_ver_json) == {:ok, only_ver_ordmap, ""}
+  end
+
+
   test "JSONUtils deserialize deserializes to an ordered map" do
     assert JsonUtils.deserialize("{\"foo\":{\"bar\":\"baz\"},\"wibble\":\"wobble\"}") ==
       {:ok, %OrdMap{

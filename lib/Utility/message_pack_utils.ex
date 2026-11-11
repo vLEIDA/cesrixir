@@ -68,17 +68,32 @@ defmodule Cesr.Utility.MessagePackUtils do
     end
   end
 
-  @spec deserialize_cesr_mgpk_payload(binary()) :: 
-    {:ok, OrdMap.t(), binary()} | {:error, any()}
   @doc """
   Deserializes cesr mgpk payload from the stream
+
+  Note: due to the weirdness of the version size we don't keep the
+  symmetry of serialize_cesr_mgpk_payload.  If your fieldmap doesn't
+  have a version size use deserialize instead
   """
+  @spec deserialize_cesr_mgpk_payload(binary()) ::
+    {:ok, OrdMap.t(), binary()} | {:error, any()}
   def deserialize_cesr_mgpk_payload(potential_mgpk_payload)
-    when byte_size(potential_mgpk_payload) < 25
+    when byte_size(potential_mgpk_payload) < 21
   do
     {:error, "Not enough input to read version string"}
   end
-  def deserialize_cesr_mgpk_payload(<<potential_mgpk_head::binary-size(25), _::binary>> = stream)
+  def deserialize_cesr_mgpk_payload(potential_mgpk_payload)
+    when byte_size(potential_mgpk_payload) in 21..26
+  do
+    padding = <<0::size((27 - byte_size(potential_mgpk_payload)) * 8)>>
+    padded_payload = potential_mgpk_payload <> padding
+    case deserialize_cesr_mgpk_payload(padded_payload) do
+      {:error, e} -> {:error, e}
+      {:ok, %OrdMap{} = o, ^padding} -> {:ok, o, ""}
+      _ -> {:error, "Error in edge case mgpk #{IO.inspect(potential_mgpk_payload)}"}
+    end
+  end
+  def deserialize_cesr_mgpk_payload(<<potential_mgpk_head::binary-size(27), _::binary>> = stream)
   do
     case Cesr.match_version(potential_mgpk_head) do
       {:error, e} -> {:error, e}

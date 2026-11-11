@@ -57,16 +57,32 @@ defmodule Cesr.Utility.CBORUtils do
   end
 
   @doc """
-  Deserializes cesr cbor payload from the stream
+  Deserializes cesr cbor payload from the stream.
+
+  Note: due to the weirdness of the version size we don't keep the
+  symmetry of serialize_cesr_cbor_payload.  If your fieldmap doesn't
+  have a version size use deserialize instead
   """
+  @spec deserialize_cesr_cbor_payload(binary()) ::
+    {:ok, OrdMap.t(), binary()} | {:error, any()}
   def deserialize_cesr_cbor_payload(potential_cbor_payload)
-    when byte_size(potential_cbor_payload) < 25
+    when byte_size(potential_cbor_payload) < 21
   do
     {:error, "Not enough input to read version string"}
   end
-  def deserialize_cesr_cbor_payload(<<potential_cbor_head::binary-size(25), _::binary>> = stream)
+  def deserialize_cesr_cbor_payload(potential_cbor_payload)
+    when byte_size(potential_cbor_payload) in 21..24
   do
-    case Cesr.match_version(potential_cbor_head) do
+    padding = <<0::size((25 - byte_size(potential_cbor_payload)) * 8)>>
+    padded_payload = potential_cbor_payload <> padding
+    case deserialize_cesr_cbor_payload(padded_payload) do
+      {:error, e} -> {:error, e}
+      {:ok, %OrdMap{} = o, ^padding} -> {:ok, o, ""}
+      _ -> {:error, "Error in edge case cbor #{IO.inspect(potential_cbor_payload)}"}
+    end
+  end
+  def deserialize_cesr_cbor_payload(stream) do
+    case Cesr.match_version(stream) do
       {:error, e} -> {:error, e}
       {:ok, version} -> read_off_size_cbor(stream, version)
     end
